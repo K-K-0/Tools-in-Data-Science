@@ -1,25 +1,4 @@
 {
-  "builds": [{ "src": "api/index.py", "use": "@vercel/python" }],
-  "routes": [
-    {
-      "src": "/api/latency",
-      "methods": ["OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-        "Access-Control-Max-Age": "86400"
-      },
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/(.*)",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "*"
-      },
-      "dest": "api/index.py"
-    }
-  ]
+  "builds": [{ "src": "api/latency.py", "use": "@vercel/python" }],
+  "routes": [{ "src": "/(.*)", "dest": "api/latency.py" }]
 }
