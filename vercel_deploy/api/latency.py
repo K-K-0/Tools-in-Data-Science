@@ -1,24 +1,40 @@
-import json, numpy as np, pandas as pd
+import json
+import numpy as np
+import pandas as pd
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler
 
 try:
-    DATA_PATH = Path(__file__).parent.parent / "data" / "latency.json"
+    DATA_PATH = Path(__file__).parent.parent / "data" / "latency.csv"
     df = pd.read_json(DATA_PATH)
 except Exception as e:
     df = None
     LOAD_ERROR = str(e)
 
+
 class handler(BaseHTTPRequestHandler):
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self._cors()
+    def _send(self, code, body):
+        data = json.dumps(body).encode()
+        self.send_response(code)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
         self.end_headers()
+        self.wfile.write(data)
+
+    def do_OPTIONS(self):
+        self._send(200, {})
+
+    def do_GET(self):
+        self._send(200, {"status": "ok"})
 
     def do_POST(self):
         try:
             if df is None:
-                raise RuntimeError(f"Data load failed: {LOAD_ERROR}")
+                return self._send(500, {"error": LOAD_ERROR})
 
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length))
@@ -38,20 +54,7 @@ class handler(BaseHTTPRequestHandler):
                     "breaches":    int((rdf["latency_ms"] > threshold).sum()),
                 }
 
-            self.send_response(200)
-            self._cors()
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(result).encode())
+            self._send(200, result)
 
         except Exception as e:
-            self.send_response(500)
-            self._cors()
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode())
-
-    def _cors(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self._send(500, {"error": str(e)})
