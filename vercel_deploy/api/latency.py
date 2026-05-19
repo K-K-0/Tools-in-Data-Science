@@ -5,7 +5,7 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler
 
 try:
-    DATA_PATH = Path(__file__).parent.parent / "data" / "latency.csv"
+    DATA_PATH = Path(__file__).parent.parent / "data" / "latency.json"
     df = pd.read_json(DATA_PATH)
 except Exception as e:
     df = None
