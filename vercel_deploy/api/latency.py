@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATA_PATH = Path(__file__).parent.parent / "data" / "latency.csv"
+DATA_PATH = Path(__file__).parent.parent / "data" / "latency.json"
 df = pd.read_json(DATA_PATH)
 
 @app.get("/")
