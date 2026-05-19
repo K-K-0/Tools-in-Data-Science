@@ -10,7 +10,7 @@ df = pd.read_json(DATA_PATH)
 
 CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "*",
     "Access-Control-Allow-Headers": "*",
 }
 
