@@ -4,7 +4,7 @@ from http.server import BaseHTTPRequestHandler
 
 try:
     DATA_PATH = Path(__file__).parent.parent / "data" / "latency.csv"
-    df = pd.read_csv(DATA_PATH)
+    df = pd.read_json(DATA_PATH)
 except Exception as e:
     df = None
     LOAD_ERROR = str(e)
