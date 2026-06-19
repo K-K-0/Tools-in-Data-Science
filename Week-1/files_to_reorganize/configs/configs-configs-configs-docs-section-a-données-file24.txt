@@ -1,0 +1,10 @@
+category: configs
+
+HISTORICAL ARCHIVES - File 24
+
+This is a test file for the reorganization exercise.
+Path: docs/section-a/données/file24.txt
+Category: configs
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.

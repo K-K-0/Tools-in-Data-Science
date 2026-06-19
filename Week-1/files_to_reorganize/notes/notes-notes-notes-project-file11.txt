@@ -1,0 +1,10 @@
+category: notes
+
+HISTORICAL ARCHIVES - File 11
+
+This is a test file for the reorganization exercise.
+Path: project/file11.txt
+Category: notes
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
