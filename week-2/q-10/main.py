@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
-YOUR_EMAIL = "24f1002052@study.iitm.ac.in"  # <-- replace with your actual email
+YOUR_EMAIL = "24f1002052@ds.study.iitm.ac.in"  # <-- replace with your actual email
 
 ALLOWED_ORIGINS = [
     "https://app-ql5sy6.example.com",
