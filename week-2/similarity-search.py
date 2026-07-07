@@ -7,9 +7,6 @@ import faiss
 # -----------------------------------
 
 
-# -----------------------------------
-# Sample Documents
-# -----------------------------------
 documents = [
     "Machine learning is a subset of Artificial Intelligence.",
     "Python is one of the most popular programming languages.",
