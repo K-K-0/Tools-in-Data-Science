@@ -2,10 +2,6 @@ import numpy as np
 import faiss
 
 
-# -----------------------------------
-# Initialize OpenAI client
-# -----------------------------------
-
 
 documents = [
     "Machine learning is a subset of Artificial Intelligence.",
