@@ -29,8 +29,8 @@ app.add_middleware(
 
 # Use AIPIPE_API_KEY if set, otherwise fall back to a plain OpenAI key.
 # AIPipe is OpenAI-compatible so the same client works for both.
-API_KEY = os.environ.get("AIPIPE_API_KEY") or os.environ["OPENAI_API_KEY"]
-BASE_URL = os.environ.get("AIPIPE_BASE_URL") or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjI0ZjEwMDIwNTJAZHMuc3R1ZHkuaWl0bS5hYy5pbiIsImlhdCI6MTc4MzY2MTg2NSwiaXNzIjoiaHR0cHM6Ly9haXBpcGUub3JnIiwiYXVkIjoiYWlwaXBlLWFwaSIsImV4cCI6MTc4NDI2NjY2NX0.bz34zqEgjZ3fR69QWSjN60c7l-DAZgyiGzcVzCaDjBo"
+BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
 EMBED_MODEL = "text-embedding-3-small"  # fixed by the task spec -- ranking is defined by this exact model
 
 client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
