@@ -27,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjI0ZjEwMDIwNTJAZHMuc3R1ZHkuaWl0bS5hYy5pbiIsImlhdCI6MTc4MzY2MTg2NSwiaXNzIjoiaHR0cHM6Ly9haXBpcGUub3JnIiwiYXVkIjoiYWlwaXBlLWFwaSIsImV4cCI6MTc4NDI2NjY2NX0.bz34zqEgjZ3fR69QWSjN60c7l-DAZgyiGzcVzCaDjBo"
+# API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjI0ZjEwMDIwNTJAZHMuc3R1ZHkuaWl0bS5hYy5pbiIsImlhdCI6MTc4MzY2MTg2NSwiaXNzIjoiaHR0cHM6Ly9haXBpcGUub3JnIiwiYXVkIjoiYWlwaXBlLWFwaSIsImV4cCI6MTc4NDI2NjY2NX0.bz34zqEgjZ3fR69QWSjN60c7l-DAZgyiGzcVzCaDjBo"
 BASE_URL = os.environ.get("AIPIPE_BASE_URL", "https://aipipe.org/openai/v1")
 MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
 
