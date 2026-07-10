@@ -30,7 +30,7 @@ app.add_middleware(
 
 # --- OpenRouter client setup ---
 # Get a key at https://openrouter.ai/keys
-# Set OPENROUTER_API_KEY as an environment variable / deployment secret.
+
 
 BASE_URL = "https://openrouter.ai/api/v1"
 
