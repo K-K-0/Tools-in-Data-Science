@@ -31,7 +31,7 @@ app.add_middleware(
 # --- OpenRouter client setup ---
 # Get a key at https://openrouter.ai/keys
 # Set OPENROUTER_API_KEY as an environment variable / deployment secret.
-API_KEY = "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"
+
 BASE_URL = "https://openrouter.ai/api/v1"
 
 # Free, vision-capable models currently available on OpenRouter (July 2026):

@@ -30,7 +30,6 @@ app.add_middleware(
 
 # --- LLM client setup ---
 # Works with OpenAI directly, or an OpenAI-compatible proxy (e.g. AIPipe).
-API_KEY =  "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjI0ZjEwMDIwNTJAZHMuc3R1ZHkuaWl0bS5hYy5pbiIsImlhdCI6MTc4MzYwMDU4OSwiaXNzIjoiaHR0cHM6Ly9haXBpcGUub3JnIiwiYXVkIjoiYWlwaXBlLWFwaSIsImV4cCI6MTc4NDIwNTM4OX0.Xmc7y2c3z2gIxHyTdKeSGDUKRkk351Dr8NO_Q86fx04"
 BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1")
 MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
 
