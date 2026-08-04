@@ -13,8 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -24,5 +23,4 @@ jobs:
           playwright install chromium
 
       - name: Run scraper 24f1002052@ds.study.iitm.ac.in
-        run: |
-          python scraper.py
+        run: python script.py
