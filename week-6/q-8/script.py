@@ -1,82 +1,41 @@
 from playwright.sync_api import sync_playwright
-import re
 
-# Paste your Seed 85-94 URLs here
-URLS = [
-    'https://sanand0.github.io/tdsdata/js_table/?seed=85',
-    'https://sanand0.github.io/tdsdata/js_table/?seed=86',
-    'https://sanand0.github.io/tdsdata/js_table/?seed=87',
-    'https://sanand0.github.io/tdsdata/js_table/?seed=88',
-    'https://sanand0.github.io/tdsdata/js_table/?seed=89',
-    'https://sanand0.github.io/tdsdata/js_table/?seed=90',
-    'https://sanand0.github.io/tdsdata/js_table/?seed=91',
-    'https://sanand0.github.io/tdsdata/js_table/?seed=92',
-    'https://sanand0.github.io/tdsdata/js_table/?seed=93',
-    'https://sanand0.github.io/tdsdata/js_table/?seed=94',
-
-]
-
+URLS = [f'https://sanand0.github.io/tdsdata/js_table/?seed={i}' for i in range(85, 95)]
 grand_total = 0.0
 
-
-def scrape_current_page(page):
-    total = 0.0
-
-    tables = page.locator("table")
-    table_count = tables.count()
-
-    for i in range(table_count):
-        table = tables.nth(i)
-
-        rows = table.locator("tr")
-        row_count = rows.count()
-
-        for r in range(row_count):
-            cells = rows.nth(r).locator("td")
-            cell_count = cells.count()
-
-            for c in range(cell_count):
-                text = cells.nth(c).inner_text().strip()
-
-                # remove commas
-                text = text.replace(",", "")
-
-                try:
-                    total += float(text)
-                except ValueError:
-                    pass
-
-    return total
-
+def scrape_current_page_fast(page):
+    # This evaluates JS inside Chrome memory, bypassing Playwright loop overhead entirely
+    return page.evaluate("""() => {
+        let total = 0;
+        let cells = document.querySelectorAll('table td');
+        cells.forEach(cell => {
+            let text = cell.innerText.replace(/,/g, '').trim();
+            let val = parseFloat(text);
+            if (!isNaN(val)) {
+                total += val;
+            }
+        });
+        return total;
+    }""")
 
 with sync_playwright() as p:
-
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
-
+    
     for url in URLS:
-
         print(f"Visiting {url}")
-
         page.goto(url)
-        page.wait_for_load_state("networkidle")
-
+        page.wait_for_load_state("domcontentloaded") # Faster than waiting for networkidle
+        
         while True:
-
-            grand_total += scrape_current_page(page)
-
-            # Find a Next button/link
-            next_btn = page.locator("text=Next")
-
-            if next_btn.count() == 0:
+            grand_total += scrape_current_page_fast(page)
+            
+            next_btn = page.locator("text=Next").first
+            if next_btn.count() == 0 or not next_btn.is_visible():
                 break
-
-            if not next_btn.first.is_visible():
-                break
-
-            next_btn.first.click()
-            page.wait_for_load_state("networkidle")
+                
+            next_btn.click()
+            page.wait_for_load_state("domcontentloaded")
 
     browser.close()
-
-print(f"\nTOTAL = {grand_total}")
+    print(f"\nTOTAL = {grand_total}")
