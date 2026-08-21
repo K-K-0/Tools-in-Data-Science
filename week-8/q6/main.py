@@ -261,7 +261,7 @@ async def handle_pipeline(request: Request):
             elif p_status != 'succeeded' and i > 0:
                 action, reason = 'block', 'UPSTREAM_PENDING'
             else:
-                action, reason = 'rerun', 'CACHE_MISS'
+                action, reason = 'rerun', 'RETRYABLE_FAILURE'
 
         res_nodes.append({
             "node": name,
