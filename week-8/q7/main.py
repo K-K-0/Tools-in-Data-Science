@@ -6,14 +6,14 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
-REQUIRED_FILES = [
+REQUIRED_FILES = {
     "README.md",
     "training_manifest.json",
     "evaluation.json",
     "inventory.json",
     "adapter_model.safetensors",
     "adapter_config.json"
-]
+}
 
 UNSAFE_EXTENSIONS = {".bin", ".pt", ".pth", ".pkl", ".pickle"}
 
@@ -42,48 +42,41 @@ async def verify_bundle(request: Request):
     limitations = policy.get("limitations")
 
     if not isinstance(req_slices, list) or len(req_slices) == 0 or \
-       not all(isinstance(s, str) and s.strip() and s == req_slices[i-1] for i, s in enumerate(req_slices) if i > 0) or \
-       not isinstance(license_val, str) or not license_val.strip() or \
-       not isinstance(intended_use, str) or not intended_use.strip() or \
-       not isinstance(limitations, str) or not limitations.strip():
+       not all(isinstance(s, str) and s for s in req_slices) or \
+       not isinstance(license_val, str) or not license_val or \
+       not isinstance(intended_use, str) or not intended_use or \
+       not isinstance(limitations, str) or not limitations:
         return JSONResponse(status_code=400, content={"error": "INVALID_INPUT"})
-
-    unique_slices = []
-    seen_s = set()
-    for s in req_slices:
-        if s not in seen_s:
-            seen_s.add(s)
-            unique_slices.append(s)
-    req_slices = unique_slices
 
     violations = set()
 
+    # 1. Check missing files
     for fname in REQUIRED_FILES:
         if fname not in files or not isinstance(files[fname], str):
             violations.add(f"MISSING_FILE:{fname}")
 
-    if any(not isinstance(k, str) or not isinstance(v, str) for k, v in files.items()):
-        violations.add("INVALID_POLICY")
-
-    unsafe_files = {k for k in files if any(k.endswith(ext) for ext in UNSAFE_EXTENSIONS)}
-    for f in unsafe_files:
-        violations.add("UNSAFE_WEIGHTS")
+    # 2. Validate file value types and unsafe extensions
+    for fname, content in files.items():
+        if not isinstance(content, str):
+            violations.add("INVALID_POLICY") # Re-using generic invalid format, or missing file implicitly handled
+            continue
+        if any(fname.endswith(ext) for ext in UNSAFE_EXTENSIONS):
+            violations.add("UNSAFE_WEIGHTS")
 
     inventory_digest = None
-    inventory_valid = True
 
-    if "inventory.json" not in violations:
+    # 3. Inventory Verification
+    if f"MISSING_FILE:inventory.json" not in violations:
         try:
             inv_data = json.loads(files["inventory.json"])
             if not isinstance(inv_data, list):
                 violations.add("INVALID_JSON:inventory.json")
-                inventory_valid = False
             else:
                 expected_inv = []
                 for fname in sorted(files.keys()):
                     if fname == "inventory.json":
                         continue
-                    f_bytes = files[fname].encode('utf-8')
+                    f_bytes = content.encode('utf-8') if isinstance((content := files[fname]), str) else b''
                     expected_inv.append({
                         "name": fname,
                         "bytes": len(f_bytes),
@@ -93,58 +86,57 @@ async def verify_bundle(request: Request):
                 if compact_json(inv_data) != compact_json(expected_inv):
                     violations.add("INVENTORY_MISMATCH")
                 
-                tracked_files = {item.get("name") for item in inv_data if isinstance(item, dict)}
+                tracked = {item.get("name") for item in inv_data if isinstance(item, dict)}
                 for fname in files:
-                    if fname != "inventory.json" and fname not in tracked_files:
+                    if fname != "inventory.json" and fname not in tracked:
                         violations.add("UNTRACKED_FILE")
                 
                 inventory_digest = sha256_hash(compact_json(expected_inv).encode('utf-8'))
         except Exception:
             violations.add("INVALID_JSON:inventory.json")
-            inventory_valid = False
 
+    # 4. Training Manifest
     manifest_data = None
-    if "training_manifest.json" not in violations:
+    if f"MISSING_FILE:training_manifest.json" not in violations:
         try:
             manifest_data = json.loads(files["training_manifest.json"])
             if not isinstance(manifest_data, dict):
                 violations.add("INVALID_TRAINING_MANIFEST")
                 manifest_data = None
             else:
-                req_manifest_fields = ["baseRevision", "task", "datasetDigest", "codeDigest", "trainingConfigDigest", "modelArtifactDigest", "evaluationArtifactDigest"]
-                for mf in req_manifest_fields:
-                    if not isinstance(manifest_data.get(mf), str) or not manifest_data[mf].strip():
+                for mf in ["baseRevision", "task", "datasetDigest", "codeDigest", "trainingConfigDigest", "modelArtifactDigest", "evaluationArtifactDigest"]:
+                    if not isinstance(manifest_data.get(mf), str) or not manifest_data[mf]:
                         violations.add(f"MISSING_MANIFEST_FIELD:{mf}")
                 
-                if "baseRevision" not in violations and (len(manifest_data.get("baseRevision", "")) != 40 or not re.fullmatch(r'[0-9a-f]{40}', manifest_data["baseRevision"])):
+                base_rev = manifest_data.get("baseRevision", "")
+                if base_rev and (len(base_rev) != 40 or not re.fullmatch(r'[0-9a-f]{40}', base_rev)):
                     violations.add("MUTABLE_BASE_REVISION")
         except Exception:
             violations.add("INVALID_JSON:training_manifest.json")
             manifest_data = None
 
-    adapter_config = None
-    if "adapter_config.json" not in violations:
+    # 5. Adapter Config
+    if f"MISSING_FILE:adapter_config.json" not in violations:
         try:
             adapter_config = json.loads(files["adapter_config.json"])
             if not isinstance(adapter_config, dict):
                 violations.add("INVALID_ADAPTER_CONFIG")
-                adapter_config = None
             else:
                 r_val = adapter_config.get("r")
                 if not isinstance(r_val, int) or r_val <= 0 or r_val > 2**53 - 1:
                     violations.add("INVALID_ADAPTER_CONFIG")
                 
                 tm = adapter_config.get("target_modules")
-                if not isinstance(tm, list) or len(tm) == 0 or not all(isinstance(x, str) and x.strip() for x in tm):
+                if not isinstance(tm, list) or len(tm) == 0 or not all(isinstance(x, str) and x for x in tm):
                     violations.add("INVALID_ADAPTER_CONFIG")
                 elif len(set(tm)) != len(tm):
                     violations.add("INVALID_ADAPTER_CONFIG")
         except Exception:
             violations.add("INVALID_JSON:adapter_config.json")
-            adapter_config = None
 
+    # 6. Evaluation
     eval_data = None
-    if "evaluation.json" not in violations:
+    if f"MISSING_FILE:evaluation.json" not in violations:
         try:
             eval_data = json.loads(files["evaluation.json"])
             if not isinstance(eval_data, dict):
@@ -152,35 +144,36 @@ async def verify_bundle(request: Request):
                 eval_data = None
             else:
                 agg = eval_data.get("aggregate")
-                if agg is None or not isinstance(agg, (int, float)) or not (0 <= agg <= 1) or agg != agg: 
+                if not isinstance(agg, (int, float)) or not (0 <= agg <= 1) or agg != agg: 
                     violations.add("INVALID_AGGREGATE")
                 
                 for sl in req_slices:
                     sl_val = eval_data.get(sl)
-                    if sl_val is None or not isinstance(sl_val, (int, float)) or not (0 <= sl_val <= 1) or sl_val != sl_val:
-                        violations.add(f"MISSING_SLICE:{sl}")
-                    elif not (0 <= sl_val <= 1):
+                    if not isinstance(sl_val, (int, float)) or not (0 <= sl_val <= 1) or sl_val != sl_val:
                         violations.add(f"SLICE_RANGE:{sl}")
+                    elif sl_val is None:
+                        violations.add(f"MISSING_SLICE:{sl}")
         except Exception:
             violations.add("INVALID_JSON:evaluation.json")
             eval_data = None
 
-    if "adapter_model.safetensors" not in violations and manifest_data and "modelArtifactDigest" not in [v.split(":")[0] for v in violations]:
+    # 7. Artifact Integrity
+    if f"MISSING_FILE:adapter_model.safetensors" not in violations and manifest_data:
         actual_model_digest = sha256_hash(files["adapter_model.safetensors"].encode('utf-8'))
         if manifest_data.get("modelArtifactDigest") != actual_model_digest:
             violations.add("MODEL_ARTIFACT_MISMATCH")
 
-    if "evaluation.json" not in violations and manifest_data and "evaluationArtifactDigest" not in [v.split(":")[0] for v in violations]:
+    if f"MISSING_FILE:evaluation.json" not in violations and manifest_data:
         actual_eval_digest = sha256_hash(files["evaluation.json"].encode('utf-8'))
         if manifest_data.get("evaluationArtifactDigest") != actual_eval_digest:
             violations.add("EVALUATION_DIGEST_MISMATCH")
 
     if eval_data and manifest_data and "MODEL_ARTIFACT_MISMATCH" not in violations:
-        eval_model_digest = eval_data.get("modelArtifactDigest")
-        if eval_model_digest is not None and manifest_data.get("modelArtifactDigest") != eval_model_digest:
+        if eval_data.get("modelArtifactDigest") != manifest_data.get("modelArtifactDigest"):
             violations.add("EVALUATION_ARTIFACT_MISMATCH")
 
-    if "README.md" not in violations:
+    # 8. Model Card
+    if f"MISSING_FILE:README.md" not in violations:
         readme = files["README.md"]
         matches = re.findall(r'<!--\s*tds-model-card\s+(.*?)\s*-->', readme, re.DOTALL)
         if len(matches) == 0:
@@ -188,26 +181,24 @@ async def verify_bundle(request: Request):
         elif len(matches) > 1:
             violations.add("MODEL_CARD_COUNT")
         else:
-            payload = matches[0]
             try:
-                card = json.loads(payload)
+                card = json.loads(matches[0])
                 if not isinstance(card, dict):
                     violations.add("INVALID_MODEL_CARD")
-                else:
-                    if manifest_data:
-                        checks = {
-                            "task": manifest_data.get("task"),
-                            "baseRevision": manifest_data.get("baseRevision"),
-                            "datasetDigest": manifest_data.get("datasetDigest"),
-                            "modelArtifactDigest": manifest_data.get("modelArtifactDigest"),
-                            "license": license_val,
-                            "intendedUse": intended_use,
-                            "limitations": limitations
-                        }
-                        for k, expected in checks.items():
-                            if card.get(k) != expected:
-                                violations.add("MODEL_CARD_MISMATCH")
-                                break
+                elif manifest_data:
+                    checks = {
+                        "task": manifest_data.get("task"),
+                        "baseRevision": manifest_data.get("baseRevision"),
+                        "datasetDigest": manifest_data.get("datasetDigest"),
+                        "modelArtifactDigest": manifest_data.get("modelArtifactDigest"),
+                        "license": license_val,
+                        "intendedUse": intended_use,
+                        "limitations": limitations
+                    }
+                    for k, expected in checks.items():
+                        if card.get(k) != expected:
+                            violations.add("MODEL_CARD_MISMATCH")
+                            break
             except json.JSONDecodeError:
                 violations.add("INVALID_MODEL_CARD")
 
